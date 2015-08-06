@@ -3,9 +3,13 @@
 func_redis is an Asterisk module to allow the use of Redis from the dialplan.
 It depends on the hiredis library.
 
-This project was forked from https://github.com/tic-ull/func_redis by Sergio Medina Toledo
+This project was initially forked from https://github.com/tic-ull/func_redis by Sergio Medina Toledo
+to add hash operations.
 
-This fork has been tested with Asterisk 1.8 and 11.
+It's expected that ongoing changes will make this fork no longer backward-compatible with the original
+project.
+
+This has been tested with Asterisk 1.8 and 11.
 
 ## Using func_redis
 
@@ -56,20 +60,28 @@ timeout=3
 You can use these commands related to func_redis in the Asterisk CLI 
 
 1. ```redis show [pattern]```
+
     Shows all the key values.
+
     [pattern] pattern to match keys
+
     Examples :
         - h?llo matches hello, hallo and hxllo
         - h*llo matches hllo and heeeello
         - h[ae]llo matches hello and hallo, but not hillo
 
 2. ```redis hshow <hash>```
+
     Shows all the hash's values for a given hash.
     
 3. ```redis set <key> <value>```
+
     Sets the key's <key> value to <value>.
+
    ```redis set <key> <hash> <value>```
+
     Sets the hash's <hash> value <value> for a given key <key>.
     
 4. ```redis del <key>```
-    Deletes the key-value pair in redis.
+
+    Deletes the key.
