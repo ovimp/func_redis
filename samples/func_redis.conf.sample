@@ -19,7 +19,10 @@ port=6379
 
 ; database name in redis
 ; NOTE: this is currently not used
-dbname=asterisk		
+dbname=asterisk
+
+; password for redis server
+;password=s3cr3tp@ssw0rd
 
 ; connection time out when connecting to the server
 timeout=3

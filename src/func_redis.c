@@ -31,7 +31,6 @@
 
 ASTERISK_FILE_VERSION("func_redis.c", "$Revision: 2 $")
 
-
 #include <asterisk/module.h>
 #include <asterisk/channel.h>
 #include <asterisk/pbx.h>
@@ -45,6 +44,8 @@ ASTERISK_FILE_VERSION("func_redis.c", "$Revision: 2 $")
 #endif
 
 #include <hiredis/hiredis.h>
+#include <errno.h>
+
 
 #define redisLoggedCommand(redis, ...) redisCommand(redis, __VA_ARGS__); \
 ast_log(LOG_DEBUG, __VA_ARGS__);
@@ -56,6 +57,7 @@ ast_log(LOG_DEBUG, __VA_ARGS__);
 		</synopsis>
 		<syntax>
 			<parameter name="key" required="true" />
+			<parameter name="hash" required="false" />
 		</syntax>
 		<description>
 			<para>This function will read from or write a value to the Redis database.  On a
@@ -129,8 +131,9 @@ redisReply * reply = NULL;
 
 static char hostname[STR_CONF_SZ] = "";
 static char dbname[STR_CONF_SZ] = "";
+static char password[STR_CONF_SZ] = "";
 static int port = 6379;
-
+static const struct timeval timeout;
 
 static int load_config()
 {
@@ -146,10 +149,6 @@ static int load_config()
 	}
 
 	ast_mutex_lock(&redis_lock);
-
-	if (redis) {
-		redisFree(redis);
-	}
 
 	if (!(conf_str = ast_variable_retrieve(config, "general", "hostname"))) {
 		ast_log(LOG_WARNING,
@@ -170,6 +169,14 @@ static int load_config()
 				"Redis: No database name found, using 'asterisk' as default.\n");
 		conf_str =  "asterisk";
 	}
+
+	if (!(conf_str = ast_variable_retrieve(config, "general", "password"))) {
+		ast_log(LOG_WARNING,
+				"Redis: No password found, disabling authentication.\n");
+		conf_str =  "";
+	}
+		conf_str = password;
+
 	ast_copy_string(dbname, conf_str, sizeof(dbname));
 
 	if (!(conf_str = ast_variable_retrieve(config, "general", "timeout"))) {
@@ -181,18 +188,35 @@ static int load_config()
 
 	ast_config_destroy(config);
 
-	redis = redisConnectWithTimeout(hostname, port, timeout);
-
-	if (redis == NULL || redis->err != 0) {
-		ast_log(LOG_ERROR,
-				"Redis: Couldn't establish connection.\n");
-		return -1;
-	}
-
 	ast_verb(2, "Redis config loaded.\n");
 
 	/* Done reloading. Release lock so others can now use driver. */
 	ast_mutex_unlock(&redis_lock);
+
+	return 1;
+}
+
+static int redis_connect()
+
+{
+	if (redis) {
+		redisFree(redis);
+	}
+
+	redis = redisConnectWithTimeout(hostname, port, timeout);
+	if (redis == NULL || redis->err != 0) {
+		ast_log(LOG_ERROR,
+			"Redis: Couldn't establish connection.\n");
+		return -1;
+	}
+
+	if (password) {
+		reply = redisLoggedCommand(redis,"AUTH %s", password);
+		if (redis == NULL || redis->err != 0) {
+			ast_log(LOG_ERROR, "REDIS: Unable to authenticate.\n");
+			return -1;
+		}
+	}
 
 	return 1;
 }
@@ -575,7 +599,7 @@ static int unload_module(void)
 
 static int load_module(void)
 {
-	if(load_config() == -1)
+	if(load_config() == -1 || redis_connect() == -1)
 		return AST_MODULE_LOAD_DECLINE;
 	int res = 0;
 	
