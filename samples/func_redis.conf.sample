@@ -17,9 +17,8 @@ hostname=127.0.0.1
 ; port of the redis server
 port=6379
 
-; database name in redis
-; NOTE: this is currently not used
-dbname=asterisk
+; database index in redis
+database=0
 
 ; password for redis server
 ;password=s3cr3tp@ssw0rd

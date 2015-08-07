@@ -3,7 +3,7 @@
 func_redis is an Asterisk module to allow the use of Redis from the dialplan.
 It depends on the hiredis library.
 
-This project was initially forked from Sergio Medina Toledo's func_redis (https://github.com/tic-ull/func_redis) to add hash operations and authentication.
+This project was initially forked from Sergio Medina Toledo's func_redis (https://github.com/tic-ull/func_redis) to add hash operations, authentication and database selection.
 
 It's expected that ongoing changes will make this fork no longer backward-compatible with the original
 project.
@@ -23,9 +23,8 @@ Example:
 hostname=127.0.0.1
 ; port of the redis server
 port=6379
-; database name in redis
-; NOTE: this is currently not used
-dbname=asterisk
+; database index in redis
+database=0
 ; password for redis server
 ; if not set, authentication will not be used
 ;password=s3cr3tp@ssw0rd

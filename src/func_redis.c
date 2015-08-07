@@ -130,7 +130,7 @@ redisContext * redis = NULL;
 redisReply * reply = NULL;
 
 static char hostname[STR_CONF_SZ] = "";
-static char dbname[STR_CONF_SZ] = "";
+static char database[STR_CONF_SZ] = "";
 static char password[STR_CONF_SZ] = "";
 static int port = 6379;
 static const struct timeval timeout;
@@ -166,13 +166,13 @@ static int load_config()
 
 	port = atoi(conf_str);
 	
-	if (!(conf_str = ast_variable_retrieve(config, "general", "dbname"))) {
+	if (!(conf_str = ast_variable_retrieve(config, "general", "database"))) {
 		ast_log(LOG_WARNING,
-				"No redis database name found, using 'asterisk' as default.\n");
-		conf_str =  "asterisk";
+				"No redis database index found, using DB 0 as default.\n");
+		conf_str =  "0";
 	}
 
-	ast_copy_string(dbname, conf_str, sizeof(dbname));
+	ast_copy_string(database, conf_str, sizeof(database));
 
 	if (!(conf_str = ast_variable_retrieve(config, "general", "password"))) {
 		ast_log(LOG_WARNING,
@@ -206,7 +206,7 @@ static int redis_connect()
 	if (redis) {
 		redisFree(redis);
 	}
-
+	ast_log(LOG_WARNING, "Connecting...\n");
 	redis = redisConnectWithTimeout(hostname, port, timeout);
 
 	if (redis == NULL || redis->err != 0) {
@@ -214,15 +214,27 @@ static int redis_connect()
 			"Couldn't establish connection.\n");
 		return -1;
 	}
+	ast_log(LOG_WARNING, "Connected.\n");
 
 	if (strlen(password) != 0) {
-		ast_log(LOG_WARNING,"Authenticating.\n");
+		ast_log(LOG_WARNING,"Authenticating...\n");
 		reply = redisLoggedCommand(redis,"AUTH %s", password);
 		if (redis == NULL || redis->err != 0) {
 			ast_log(LOG_ERROR, "Unable to authenticate.\n");
 			return -1;
 		}
 		ast_log(LOG_WARNING, "Authenticated.\n");
+		freeReplyObject(reply);
+	}
+
+	if (strlen(database) != 0) {
+		ast_log(LOG_WARNING,"Selecting DB %s\n", database);
+		reply = redisLoggedCommand(redis,"SELECT %s", database);
+		if (redis == NULL || redis->err != 0) {
+			ast_log(LOG_ERROR, "Unable to select DB %s.\n", database);
+			return -1;
+		}
+		ast_log(LOG_WARNING, "Database %s selected.\n", database);
 		freeReplyObject(reply);
 	}
 
