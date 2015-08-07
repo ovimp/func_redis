@@ -3,7 +3,7 @@
 func_redis is an Asterisk module to allow the use of Redis from the dialplan.
 It depends on the hiredis library.
 
-This project was initially forked from Sergio Medina Toledo's func_redis (https://github.com/tic-ull/func_redis) to add hash operations.
+This project was initially forked from Sergio Medina Toledo's func_redis (https://github.com/tic-ull/func_redis) to add hash operations and authentication.
 
 It's expected that ongoing changes will make this fork no longer backward-compatible with the original
 project.
