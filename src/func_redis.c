@@ -24,6 +24,7 @@
 
 /*** MODULEINFO
 	<support_level>extended</support_level>
+	<depend>hiredis</depend>
  ***/
 
 
@@ -133,9 +134,9 @@ static char hostname[STR_CONF_SZ] = "";
 static char database[STR_CONF_SZ] = "";
 static char password[STR_CONF_SZ] = "";
 static int port = 6379;
-static const struct timeval timeout;
+static struct timeval timeout;
 
-static int load_config()
+static int load_config(void)
 {
 	struct ast_config *config;
 	const char *conf_str;
@@ -188,7 +189,9 @@ static int load_config()
 		conf_str = "5";
 	}
 
-	struct timeval timeout = { atoi(conf_str), 0 };
+	//struct timeval timeout = { atoi(conf_str), 0 };
+
+	timeout.tv_sec = atoi(conf_str);
 
 	ast_config_destroy(config);
 
@@ -200,7 +203,7 @@ static int load_config()
 	return 1;
 }
 
-static int redis_connect()
+static int redis_connect(void)
 
 {
 	if (redis) {
@@ -211,7 +214,7 @@ static int redis_connect()
 
 	if (redis == NULL || redis->err != 0) {
 		ast_log(LOG_ERROR,
-			"Couldn't establish connection.\n");
+			"Couldn't establish connection. Reason: %s\n", redis->errstr);
 		return -1;
 	}
 	ast_log(LOG_WARNING, "Connected.\n");
@@ -220,7 +223,7 @@ static int redis_connect()
 		ast_log(LOG_WARNING,"Authenticating...\n");
 		reply = redisLoggedCommand(redis,"AUTH %s", password);
 		if (redis == NULL || redis->err != 0) {
-			ast_log(LOG_ERROR, "Unable to authenticate.\n");
+			ast_log(LOG_ERROR, "Unable to authenticate. Reason: %s\n", redis->errstr);
 			return -1;
 		}
 		ast_log(LOG_WARNING, "Authenticated.\n");
@@ -231,7 +234,7 @@ static int redis_connect()
 		ast_log(LOG_WARNING,"Selecting DB %s\n", database);
 		reply = redisLoggedCommand(redis,"SELECT %s", database);
 		if (redis == NULL || redis->err != 0) {
-			ast_log(LOG_ERROR, "Unable to select DB %s.\n", database);
+			ast_log(LOG_ERROR, "Unable to select DB %s. Reason: %s\n", database, redis->errstr);
 			return -1;
 		}
 		ast_log(LOG_WARNING, "Database %s selected.\n", database);
@@ -305,7 +308,7 @@ static int function_redis_write(struct ast_channel *chan, const char *cmd, char 
 	}
 
 	if (redis == NULL || redis->err != 0) {
-		ast_log(LOG_WARNING, "REDIS: Error writing value to database.\n");
+		ast_log(LOG_WARNING, "REDIS: Error writing value to database. Reason: %s\n", redis->errstr);
 	}
 
 	freeReplyObject(reply);
@@ -431,7 +434,7 @@ static int function_redis_publish(struct ast_channel *chan, const char *cmd, cha
 	reply = redisLoggedCommand(redis,"PUBLISH %s %s", args.redis_channel, value);
 
 	if (redis == NULL || redis->err != 0) {
-		ast_log(LOG_ERROR, "REDIS_PUBLISH: Error publishing message\n");
+		ast_log(LOG_ERROR, "REDIS_PUBLISH: Error publishing message. Reason: %s\n", redis->errstr);
 	} else {
         char str_int[21];
         snprintf(str_int, 21, "%lld", reply->integer);
